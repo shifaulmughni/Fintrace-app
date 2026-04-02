@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from './lib/supabase'; // Pastikan path sesuai file kamu
-import { Plus, Trash2, Wallet, ArrowUpCircle, ArrowDownCircle, Calendar, LogOut, X, LayoutDashboard, TrendingUp, TrendingDown } from 'lucide-react';
+import { supabase } from './lib/supabase';
+import { Plus, Trash2, Wallet, ArrowUpCircle, ArrowDownCircle, Calendar, LogOut, X, LayoutDashboard, TrendingUp, TrendingDown, PieChart } from 'lucide-react';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -24,7 +24,6 @@ function App() {
       if (session?.user) fetchTransactions(session.user.id);
       else setTransactions([]);
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -43,7 +42,6 @@ function App() {
     const { error } = await supabase
       .from('transactions')
       .insert([{ amount: Number(amount), note, type, date, user_id: user.id }]);
-
     if (!error) {
       setAmount(''); setNote(''); setIsModalOpen(false);
       fetchTransactions(user.id);
@@ -55,9 +53,18 @@ function App() {
     if (!error) fetchTransactions(user.id);
   };
 
+  // Logika Kalkulasi Dashboard
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + curr.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + curr.amount, 0);
   const balance = totalIncome - totalExpense;
+
+  // Persentase Penggunaan Budget (Expense vs Income)
+  const expenseProgress = totalIncome > 0 ? Math.min(Math.round((totalExpense / totalIncome) * 100), 100) : 0;
+  
+  // Hitung Stroke Dasharray untuk Ring Chart (Lingkaran)
+  const radius = 70;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (expenseProgress / 100) * circumference;
 
   if (!user) {
     return (
@@ -75,7 +82,7 @@ function App() {
     <div className="min-h-screen bg-[#050505] text-zinc-100 font-sans selection:bg-indigo-500/30">
       <div className="max-w-[1400px] mx-auto p-6 md:p-10 pb-40">
         
-        {/* Header Section */}
+        {/* Header */}
         <header className="flex justify-between items-center mb-12">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(79,70,229,0.4)]">
@@ -86,36 +93,32 @@ function App() {
               <h1 className="text-xl font-bold tracking-tight">{user.user_metadata.full_name}</h1>
             </div>
           </div>
-          <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl text-zinc-400 hover:text-rose-500 hover:border-rose-500/30 transition-all text-xs font-bold">
+          <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 px-4 py-2 rounded-xl text-zinc-400 hover:text-rose-500 transition-all text-xs font-bold">
             <LogOut size={14} /> <span>Keluar</span>
           </button>
         </header>
 
-        {/* Dashboard Grid System */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           
-          {/* LEFT & CENTER COLUMN (Hero & List) */}
+          {/* LEFT & CENTER COLUMN */}
           <div className="lg:col-span-2 space-y-8">
-            
-            {/* Balance Hero Card */}
             <div className="bg-gradient-to-br from-indigo-600 via-violet-700 to-fuchsia-700 p-8 md:p-12 rounded-[3rem] shadow-[0_30px_60px_-15px_rgba(79,70,229,0.4)] relative overflow-hidden group">
               <div className="relative z-10">
                 <p className="text-white/60 text-xs uppercase tracking-widest mb-3 font-bold">Current Balance</p>
                 <h2 className="text-4xl md:text-6xl font-black tabular-nums tracking-tighter">Rp {balance.toLocaleString('id-ID')}</h2>
               </div>
-              <Wallet className="absolute -right-8 -bottom-8 w-64 h-64 text-white/5 rotate-12 group-hover:rotate-0 transition-transform duration-700" />
+              <Wallet className="absolute -right-8 -bottom-8 w-64 h-64 text-white/5 rotate-12" />
             </div>
 
-            {/* Quick Stats Row */}
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-zinc-900/30 border border-zinc-800/50 p-6 rounded-[2rem] flex items-center gap-4">
+              <div className="bg-zinc-900/30 border border-zinc-800/50 p-6 rounded-[2rem] flex items-center gap-4 transition-all hover:border-emerald-500/30">
                 <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl"><TrendingUp size={20}/></div>
                 <div>
                   <p className="text-zinc-500 text-[10px] uppercase font-black tracking-widest mb-1">Incomes</p>
                   <p className="text-lg font-bold text-emerald-400">Rp {totalIncome.toLocaleString('id-ID')}</p>
                 </div>
               </div>
-              <div className="bg-zinc-900/30 border border-zinc-800/50 p-6 rounded-[2rem] flex items-center gap-4">
+              <div className="bg-zinc-900/30 border border-zinc-800/50 p-6 rounded-[2rem] flex items-center gap-4 transition-all hover:border-rose-500/30">
                 <div className="p-3 bg-rose-500/10 text-rose-500 rounded-xl"><TrendingDown size={20}/></div>
                 <div>
                   <p className="text-zinc-500 text-[10px] uppercase font-black tracking-widest mb-1">Expenses</p>
@@ -124,58 +127,72 @@ function App() {
               </div>
             </div>
 
-            {/* Transaction List Area */}
             <div className="space-y-6">
-              <div className="flex justify-between items-end px-2">
-                <h3 className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Recent Activity</h3>
-                <span className="text-[10px] font-bold text-zinc-600 bg-zinc-900 px-3 py-1 rounded-full border border-zinc-800">{transactions.length} Records</span>
-              </div>
-              
+              <h3 className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em] px-2">Recent Activity</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {transactions.map((t) => (
-                  <div key={t.id} className="group bg-zinc-900/20 border border-zinc-800/40 p-5 rounded-[2rem] flex items-center justify-between hover:bg-zinc-900/60 hover:border-zinc-700 transition-all">
+                  <div key={t.id} className="group bg-zinc-900/20 border border-zinc-800/40 p-5 rounded-[2rem] flex items-center justify-between hover:bg-zinc-900/60 transition-all">
                     <div className="flex items-center gap-4">
                       <div className={`p-4 rounded-2xl ${t.type === 'income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
                         {t.type === 'income' ? <ArrowUpCircle size={20} /> : <ArrowDownCircle size={20} />}
                       </div>
                       <div>
-                        <p className="font-bold text-zinc-200 capitalize tracking-tight">{t.note || 'General'}</p>
-                        <p className="text-[10px] text-zinc-500 uppercase flex items-center gap-1.5 mt-1.5 font-bold tracking-wider">
-                          <Calendar size={12} className="opacity-50" /> {new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                        </p>
+                        <p className="font-bold text-zinc-200 capitalize tracking-tight leading-tight">{t.note || 'General'}</p>
+                        <p className="text-[10px] text-zinc-500 uppercase mt-1 font-bold tracking-wider">{new Date(t.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</p>
                       </div>
                     </div>
                     <div className="text-right flex items-center gap-4">
-                      <p className={`text-lg font-black tabular-nums ${t.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                        {t.amount.toLocaleString('id-ID')}
-                      </p>
-                      <button onClick={() => deleteTransaction(t.id)} className="p-2 opacity-0 group-hover:opacity-100 text-zinc-700 hover:text-rose-500 transition-all">
-                        <Trash2 size={16} />
-                      </button>
+                      <p className={`text-lg font-black ${t.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}>{t.amount.toLocaleString('id-ID')}</p>
+                      <button onClick={() => deleteTransaction(t.id)} className="p-2 opacity-0 group-hover:opacity-100 text-zinc-700 hover:text-rose-500 transition-all"><Trash2 size={16}/></button>
                     </div>
                   </div>
                 ))}
-                {transactions.length === 0 && <div className="col-span-full py-24 text-center border-2 border-dashed border-zinc-900 rounded-[2.5rem] text-zinc-700 font-bold uppercase text-xs tracking-widest">No Transactions Found</div>}
               </div>
             </div>
           </div>
 
-          {/* RIGHT COLUMN (Analysis Sidebar - Desktop Only) */}
+          {/* RIGHT COLUMN (Spending Analysis Fungsional) */}
           <div className="hidden lg:block space-y-8 sticky top-10">
             <div className="bg-zinc-900/30 border border-zinc-800 p-8 rounded-[3rem] space-y-8">
               <h3 className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Spending Analysis</h3>
-              <div className="aspect-square flex items-center justify-center border-2 border-dashed border-zinc-800 rounded-[2.5rem] relative overflow-hidden group">
-                 <div className="w-32 h-32 border-8 border-indigo-500/20 border-t-indigo-500 rounded-full animate-[spin_3s_linear_infinite]" />
-                 <p className="absolute text-zinc-600 text-[10px] font-bold uppercase tracking-widest">Processing Data</p>
-              </div>
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-zinc-500"><span>Daily Budget</span><span>72%</span></div>
-                  <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden"><div className="h-full bg-indigo-500 w-[72%]" /></div>
+              
+              {/* Custom Ring Chart */}
+              <div className="relative flex items-center justify-center py-4">
+                <svg className="w-48 h-48 transform -rotate-90">
+                  <circle cx="96" cy="96" r="70" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-zinc-800" />
+                  <circle 
+                    cx="96" cy="96" r="70" stroke="currentColor" strokeWidth="12" fill="transparent"
+                    strokeDasharray={circumference}
+                    style={{ strokeDashoffset, transition: 'stroke-dashoffset 1s ease-in-out' }}
+                    strokeLinecap="round"
+                    className="text-indigo-500" 
+                  />
+                </svg>
+                <div className="absolute flex flex-col items-center">
+                  <span className="text-3xl font-black">{expenseProgress}%</span>
+                  <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Used</span>
                 </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-zinc-500"><span>Savings Goal</span><span>45%</span></div>
-                  <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden"><div className="h-full bg-fuchsia-500 w-[45%]" /></div>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <div className="flex justify-between text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                    <span>Usage vs Income</span>
+                    <span className={expenseProgress > 80 ? 'text-rose-500' : 'text-indigo-400'}>{expenseProgress}%</span>
+                  </div>
+                  <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-1000 ${expenseProgress > 80 ? 'bg-rose-500' : 'bg-indigo-500'}`} 
+                      style={{ width: `${expenseProgress}%` }} 
+                    />
+                  </div>
+                </div>
+                
+                <div className="p-5 bg-black/40 rounded-[1.5rem] border border-zinc-800/50">
+                   <p className="text-[10px] text-zinc-500 font-black uppercase mb-2">Insight</p>
+                   <p className="text-xs text-zinc-400 leading-relaxed">
+                     {expenseProgress > 70 ? "Hati-hati bro, pengeluaran kamu sudah mepet sama pemasukan." : "Kondisi keuangan masih aman. Terus pantau ya!"}
+                   </p>
                 </div>
               </div>
             </div>
@@ -183,13 +200,11 @@ function App() {
         </div>
       </div>
 
-      {/* Floating UI Elements */}
-      <div className="fixed bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#050505] to-transparent pointer-events-none z-30" />
+      {/* Floating UI Elements & Modal tetep sama seperti sebelumnya */}
       <button onClick={() => setIsModalOpen(true)} className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-white text-black w-16 h-16 rounded-full shadow-[0_20px_50px_rgba(255,255,255,0.2)] hover:scale-110 active:scale-95 transition-all z-40 flex items-center justify-center">
         <Plus size={32} strokeWidth={3} />
       </button>
 
-      {/* Modal Add Record */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-end sm:items-center justify-center p-4 z-[100]">
           <div className="bg-[#0f0f0f] w-full max-w-lg rounded-[3rem] p-8 md:p-12 border border-zinc-800 shadow-2xl relative">
