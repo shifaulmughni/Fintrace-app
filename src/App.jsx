@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from './lib/supabase';
+// Import diperbaiki agar sesuai dengan nama file lib/supabase.js kamu
+import { supabase } from './lib/supabase'; 
 import { Plus, Trash2, Wallet, ArrowUpCircle, ArrowDownCircle, Calendar, LogOut, X, LayoutDashboard, TrendingUp, TrendingDown, PieChart } from 'lucide-react';
 
 function App() {
@@ -53,7 +54,7 @@ function App() {
     if (!error) fetchTransactions(user.id);
   };
 
-  // Logika Kalkulasi Dashboard
+  // Logika Kalkulasi Dashboard (Data Real)
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + curr.amount, 0);
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + curr.amount, 0);
   const balance = totalIncome - totalExpense;
@@ -156,7 +157,6 @@ function App() {
             <div className="bg-zinc-900/30 border border-zinc-800 p-8 rounded-[3rem] space-y-8">
               <h3 className="text-xs font-black text-zinc-500 uppercase tracking-[0.2em]">Spending Analysis</h3>
               
-              {/* Custom Ring Chart */}
               <div className="relative flex items-center justify-center py-4">
                 <svg className="w-48 h-48 transform -rotate-90">
                   <circle cx="96" cy="96" r="70" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-zinc-800" />
@@ -165,7 +165,7 @@ function App() {
                     strokeDasharray={circumference}
                     style={{ strokeDashoffset, transition: 'stroke-dashoffset 1s ease-in-out' }}
                     strokeLinecap="round"
-                    className="text-indigo-500" 
+                    className={expenseProgress > 80 ? 'text-rose-500' : 'text-indigo-500'} 
                   />
                 </svg>
                 <div className="absolute flex flex-col items-center">
@@ -200,7 +200,6 @@ function App() {
         </div>
       </div>
 
-      {/* Floating UI Elements & Modal tetep sama seperti sebelumnya */}
       <button onClick={() => setIsModalOpen(true)} className="fixed bottom-10 left-1/2 -translate-x-1/2 bg-white text-black w-16 h-16 rounded-full shadow-[0_20px_50px_rgba(255,255,255,0.2)] hover:scale-110 active:scale-95 transition-all z-40 flex items-center justify-center">
         <Plus size={32} strokeWidth={3} />
       </button>
