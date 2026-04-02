@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from './supabaseClient'; // Pastikan file ini sudah ada
+import { supabase } from './lib/supabase'; // Pastikan file ini sudah ada
 import { Plus, Trash2, Wallet, ArrowUpCircle, ArrowDownCircle, Calendar } from 'lucide-react';
 
 function App() {
